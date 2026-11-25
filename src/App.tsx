@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Scale, Sparkles } from 'lucide-react';
-import type { ActiveTab, Application, JobListing } from './types';
+import type { ActiveTab, Application, ApplicationStatus, JobListing } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { DEFAULT_KAPTEN_SKILLS, INITIAL_APPLICATIONS } from './utils/seedData';
 import {
@@ -14,10 +14,15 @@ import { ConflictBanner } from './components/ConflictBanner';
 import { JobExplorer } from './components/JobExplorer';
 import { ManualApplicationModal } from './components/ManualApplicationModal';
 import { WarRoomPipeline } from './components/WarRoomPipeline';
+import {
+  ApplicationDetailModal,
+  type StatusTransitionPayload,
+} from './components/ApplicationDetailModal';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('explore');
   const [isManualFormOpen, setIsManualFormOpen] = useState(false);
+  const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
 
   const [kaptenSkills, setKaptenSkills] = useLocalStorage<string[]>(
     'aku-mw-magang:skills',
@@ -137,7 +142,106 @@ export function App() {
 
   const handleDeleteApplication = (appId: string) => {
     setApplications((prev) => prev.filter((app) => app.id !== appId));
+    if (selectedAppId === appId) {
+      setSelectedAppId(null);
+    }
   };
+
+  const handleTransitionStatus = (
+    appId: string,
+    nextStatus: ApplicationStatus,
+    payload: StatusTransitionPayload
+  ) => {
+    const nowIso = new Date().toISOString();
+    setApplications((prev) =>
+      prev.map((app) => {
+        if (app.id !== appId) return app;
+        const logMessage = `Status berubah: ${app.status} -> ${nextStatus}`;
+        return {
+          ...app,
+          status: nextStatus,
+          lastUpdatedAt: nowIso,
+          ...(payload.cvVersion !== undefined ? { cvVersion: payload.cvVersion } : {}),
+          ...(payload.appliedDate !== undefined ? { appliedDate: payload.appliedDate } : {}),
+          ...(payload.interviewDateTime !== undefined
+            ? { interviewDateTime: payload.interviewDateTime }
+            : {}),
+          ...(payload.salaryOffer !== undefined ? { salaryOffer: payload.salaryOffer } : {}),
+          ...(payload.workMode !== undefined ? { workMode: payload.workMode } : {}),
+          activityLogs: [
+            ...app.activityLogs,
+            {
+              id: crypto.randomUUID(),
+              timestamp: nowIso,
+              message: logMessage,
+            },
+          ],
+        };
+      })
+    );
+  };
+
+  const handleAddChecklistItem = (appId: string, text: string) => {
+    setApplications((prev) =>
+      prev.map((app) => {
+        if (app.id !== appId) return app;
+        return {
+          ...app,
+          checklist: [
+            ...app.checklist,
+            { id: crypto.randomUUID(), text, done: false },
+          ],
+        };
+      })
+    );
+  };
+
+  const handleToggleChecklistItem = (appId: string, itemId: string) => {
+    setApplications((prev) =>
+      prev.map((app) => {
+        if (app.id !== appId) return app;
+        return {
+          ...app,
+          checklist: app.checklist.map((item) =>
+            item.id === itemId ? { ...item, done: !item.done } : item
+          ),
+        };
+      })
+    );
+  };
+
+  const handleDeleteChecklistItem = (appId: string, itemId: string) => {
+    setApplications((prev) =>
+      prev.map((app) => {
+        if (app.id !== appId) return app;
+        return {
+          ...app,
+          checklist: app.checklist.filter((item) => item.id !== itemId),
+        };
+      })
+    );
+  };
+
+  const handleAddActivityNote = (appId: string, message: string) => {
+    const nowIso = new Date().toISOString();
+    setApplications((prev) =>
+      prev.map((app) => {
+        if (app.id !== appId) return app;
+        return {
+          ...app,
+          activityLogs: [
+            ...app.activityLogs,
+            { id: crypto.randomUUID(), timestamp: nowIso, message },
+          ],
+        };
+      })
+    );
+  };
+
+  const selectedApplication = useMemo(
+    () => applications.find((app) => app.id === selectedAppId) ?? null,
+    [applications, selectedAppId]
+  );
 
   return (
     <div className="page-field relative isolate flex min-h-svh flex-col overflow-x-clip">
@@ -253,6 +357,7 @@ export function App() {
               kaptenSkills={kaptenSkills}
               onSimulatePlus15Days={handleSimulatePlus15Days}
               onDeleteApplication={handleDeleteApplication}
+              onSelectApplication={setSelectedAppId}
               onOpenManualForm={() => setIsManualFormOpen(true)}
             />
           )}
@@ -296,6 +401,20 @@ export function App() {
         existingApplications={applications}
         onCreateApplication={handleCreateManualApplication}
       />
+
+      {/* Feature 4 & 5: Application Detail & Interview Prep Modal */}
+      {selectedApplication && (
+        <ApplicationDetailModal
+          application={selectedApplication}
+          kaptenSkills={kaptenSkills}
+          onClose={() => setSelectedAppId(null)}
+          onTransitionStatus={handleTransitionStatus}
+          onAddChecklistItem={handleAddChecklistItem}
+          onToggleChecklistItem={handleToggleChecklistItem}
+          onDeleteChecklistItem={handleDeleteChecklistItem}
+          onAddActivityNote={handleAddActivityNote}
+        />
+      )}
     </div>
   );
 }

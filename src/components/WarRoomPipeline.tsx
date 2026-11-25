@@ -4,6 +4,7 @@ import {
   Calendar,
   CheckSquare,
   Clock,
+  Eye,
   FileText,
   Ghost,
   MapPin,
@@ -31,6 +32,7 @@ interface WarRoomPipelineProps {
   kaptenSkills: string[];
   onSimulatePlus15Days: (appId: string) => void;
   onDeleteApplication: (appId: string) => void;
+  onSelectApplication: (appId: string) => void;
   onOpenManualForm: () => void;
 }
 
@@ -68,6 +70,7 @@ export function WarRoomPipeline({
   kaptenSkills,
   onSimulatePlus15Days,
   onDeleteApplication,
+  onSelectApplication,
   onOpenManualForm,
 }: WarRoomPipelineProps) {
   const [searchText, setSearchText] = useState('');
@@ -330,6 +333,15 @@ export function WarRoomPipeline({
                   </span>
 
                   <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onSelectApplication(app.id)}
+                      className="button button-primary min-h-9 px-3 py-1.5 text-xs"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      Detail &amp; Prep
+                    </button>
+
                     {canSimulateGhost && (
                       <button
                         type="button"
