@@ -12,29 +12,29 @@ export function ConflictBanner({ conflicts }: ConflictBannerProps) {
   return (
     <div
       role="alert"
-      className="animate-arrive rounded-[10px] border-2 border-[#ffc1c1] bg-[#003471]/95 px-5 py-4 shadow-[0_10px_28px_#00347166]"
+      className="animate-arrive border-2 border-[#FF8C9B] bg-[#211B36] px-5 py-4 shadow-[4px_4px_0_#090713]"
     >
       <div className="flex items-start gap-3.5">
-        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-[8px] bg-[#ffc1c1]/20 text-[#ffc1c1]">
+        <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center border border-[#FF8C9B] bg-[#FF8C9B]/15 text-[#FF8C9B]">
           <AlertTriangle className="h-5 w-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <p className="eyebrow text-[#ffc1c1]">
+          <p className="eyebrow text-[#FF8C9B]">
             Peringatan Jadwal Interview Bentrok ({conflicts.length})
           </p>
-          <ul className="mt-1.5 space-y-1 text-sm text-white">
+          <ul className="mt-1.5 space-y-1 text-sm text-[#F8F5FF]">
             {conflicts.map((pair, idx) => (
               <li
                 key={`${pair.appA.id}-${pair.appB.id}-${idx}`}
                 className="flex flex-wrap items-center gap-x-2 gap-y-1 leading-relaxed"
               >
-                <CalendarClock className="h-4 w-4 shrink-0 text-[#00f6ff]" />
+                <CalendarClock className="h-4 w-4 shrink-0 text-[#42F5D1]" />
                 <span>
-                  <strong className="text-[#9afff6]">{pair.appA.company}</strong> (
+                  <strong className="text-[#42F5D1]">{pair.appA.company}</strong> (
                   {formatInterviewDateTime(pair.appA.interviewDateTime ?? '')}) dan{' '}
-                  <strong className="text-[#9afff6]">{pair.appB.company}</strong> (
+                  <strong className="text-[#42F5D1]">{pair.appB.company}</strong> (
                   {formatInterviewDateTime(pair.appB.interviewDateTime ?? '')}) berselisih{' '}
-                  <strong className="text-[#ffc1c1]">{pair.diffMinutes} menit</strong> (&lt; 60
+                  <strong className="text-[#FF8C9B]">{pair.diffMinutes} menit</strong> (&lt; 60
                   menit).
                 </span>
               </li>

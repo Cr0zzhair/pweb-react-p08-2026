@@ -115,19 +115,18 @@ export function WarRoomPipeline({
     <section className="space-y-5">
       {/* Filter & Sorting Controls */}
       <div className="panel rounded-[12px] p-4 md:p-5">
-        <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-[minmax(0,1fr)_180px_210px_auto]">
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_180px_210px_auto]">
           {/* Search */}
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-white/60" />
+          <label className="search-field">
+            <Search aria-hidden="true" className="size-4 shrink-0" />
             <input
               type="search"
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               placeholder="Cari perusahaan, posisi, atau versi CV..."
               aria-label="Cari lamaran di pipeline"
-              className="field pl-10"
             />
-          </div>
+          </label>
 
           {/* Filter Status */}
           <select
@@ -228,7 +227,7 @@ export function WarRoomPipeline({
           )}
         </div>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-4 xl:grid-cols-2">
           {filteredApplications.map((app) => {
             const match = calculateSkillMatch(kaptenSkills, app.requiredSkills);
             const ghostRisk = isGhostingRisk(app);

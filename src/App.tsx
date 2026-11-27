@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react';
-import { Scale, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Undo2, X } from 'lucide-react';
 import type { ActiveTab, Application, ApplicationStatus, JobListing } from './types';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { DEFAULT_KAPTEN_SKILLS, INITIAL_APPLICATIONS } from './utils/seedData';
@@ -18,11 +18,26 @@ import {
   ApplicationDetailModal,
   type StatusTransitionPayload,
 } from './components/ApplicationDetailModal';
+import { OfferComparator } from './components/OfferComparator';
 
 export function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('explore');
   const [isManualFormOpen, setIsManualFormOpen] = useState(false);
   const [selectedAppId, setSelectedAppId] = useState<string | null>(null);
+  const [pendingUndo, setPendingUndo] = useState<{
+    application: Application;
+    index: number;
+  } | null>(null);
+  const undoTimeoutRef = useRef<number | null>(null);
+
+  useEffect(
+    () => () => {
+      if (undoTimeoutRef.current !== null) {
+        window.clearTimeout(undoTimeoutRef.current);
+      }
+    },
+    []
+  );
 
   const [kaptenSkills, setKaptenSkills] = useLocalStorage<string[]>(
     'aku-mw-magang:skills',
@@ -141,10 +156,41 @@ export function App() {
   };
 
   const handleDeleteApplication = (appId: string) => {
+    const index = applications.findIndex((app) => app.id === appId);
+    if (index < 0) return;
+    const application = applications[index];
+
+    if (undoTimeoutRef.current !== null) {
+      window.clearTimeout(undoTimeoutRef.current);
+    }
     setApplications((prev) => prev.filter((app) => app.id !== appId));
+    setPendingUndo({ application, index });
+    undoTimeoutRef.current = window.setTimeout(() => {
+      setPendingUndo(null);
+      undoTimeoutRef.current = null;
+    }, 5000);
     if (selectedAppId === appId) {
       setSelectedAppId(null);
     }
+  };
+
+  const handleUndoDelete = () => {
+    if (!pendingUndo) return;
+    if (undoTimeoutRef.current !== null) {
+      window.clearTimeout(undoTimeoutRef.current);
+      undoTimeoutRef.current = null;
+    }
+    setApplications((prev) => {
+      if (prev.some((app) => app.id === pendingUndo.application.id)) return prev;
+      const restored = [...prev];
+      restored.splice(
+        Math.min(pendingUndo.index, restored.length),
+        0,
+        pendingUndo.application
+      );
+      return restored;
+    });
+    setPendingUndo(null);
   };
 
   const handleTransitionStatus = (
@@ -244,13 +290,7 @@ export function App() {
   );
 
   return (
-    <div className="page-field relative isolate flex min-h-svh flex-col overflow-x-clip">
-      {/* Construction Grid Motif from cif.ucs.or.id */}
-      <div
-        className="construction-grid pointer-events-none absolute inset-0 -z-10"
-        aria-hidden="true"
-      />
-
+    <div className="page-field relative flex min-h-svh flex-col overflow-x-clip">
       <Header
         activeTab={activeTab}
         onTabChange={setActiveTab}
@@ -259,63 +299,62 @@ export function App() {
         onOpenManualForm={() => setIsManualFormOpen(true)}
       />
 
-      <main className="relative z-10 flex-1 py-6 md:py-10">
-        <div className="mx-auto w-full max-w-[1440px] space-y-6 px-5 md:px-8 lg:px-16">
-          {/* Hero Title Section (Compact CIF Display Style) */}
-          <div className="flex flex-wrap items-end justify-between gap-4 border-b border-white/25 pb-5">
+      <main className="relative z-10 flex-1 pb-8 pt-20 lg:ml-[248px] lg:pt-8">
+        <div className="mx-auto w-full max-w-[1200px] space-y-6 px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-end justify-between gap-6 border-b border-white/20 pb-6">
             <div>
-              <p className="eyebrow text-[#9afff6]">
+              <p className="eyebrow text-[#42F5D1]">
                 {activeTab === 'explore' && '01 / Eksplorasi & Skill Match'}
                 {activeTab === 'pipeline' && '02 / War Room Lamaran'}
                 {activeTab === 'comparator' && '03 / Offer Comparator'}
               </p>
-              <h1 className="brand-display mt-2 text-3xl text-white sm:text-4xl lg:text-5xl">
+              <h1 className="brand-display mt-2 max-w-full text-2xl text-[#F8F5FF] md:text-3xl">
                 {activeTab === 'explore' && (
                   <>
-                    Eksplorasi <span className="text-[#9afff6]">Lowongan.</span>
+                    Eksplorasi <span className="text-[#42F5D1]">Lowongan.</span>
                   </>
                 )}
                 {activeTab === 'pipeline' && (
                   <>
-                    War Room <span className="text-[#9afff6]">Pipeline.</span>
+                    War Room <span className="text-[#42F5D1]">Pipeline.</span>
                   </>
                 )}
                 {activeTab === 'comparator' && (
                   <>
-                    Offer <span className="text-[#9afff6]">Comparator.</span>
+                    Offer <span className="text-[#42F5D1]">Comparator.</span>
                   </>
                 )}
               </h1>
             </div>
 
             {/* Quick Stats Strip (Derived State) */}
-            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-5">
-              <div className="panel rounded-[8px] px-3.5 py-2.5">
-                <p className="text-[10px] font-bold tracking-[0.12em] text-[#9afff6] uppercase">
+            <div className="grid grid-cols-2 gap-x-2 gap-y-3 sm:grid-cols-5">
+              <div className="border-l border-white/20 px-3.5 py-1">
+                <p className="text-[10px] font-bold tracking-[0.12em] text-[#42F5D1] uppercase">
                   Total Lamaran
                 </p>
-                <p className="mt-0.5 text-xl font-extrabold tabular-nums text-white">
+                <p className="mt-0.5 text-xl font-extrabold tabular-nums text-[#F8F5FF]">
                   {stats.total}
                 </p>
               </div>
-              <div className="panel rounded-[8px] px-3.5 py-2.5">
-                <p className="text-[10px] font-bold tracking-[0.12em] text-[#9afff6] uppercase">
+              <div className="border-l border-white/20 px-3.5 py-1">
+                <p className="text-[10px] font-bold tracking-[0.12em] text-[#42F5D1] uppercase">
                   Response Rate
                 </p>
-                <p className="mt-0.5 text-xl font-extrabold tabular-nums text-white">
+                <p className="mt-0.5 text-xl font-extrabold tabular-nums text-[#F8F5FF]">
                   {stats.responseRate}%
                 </p>
               </div>
-              <div className="panel rounded-[8px] px-3.5 py-2.5">
-                <p className="text-[10px] font-bold tracking-[0.12em] text-[#9afff6] uppercase">
+              <div className="border-l border-white/20 px-3.5 py-1">
+                <p className="text-[10px] font-bold tracking-[0.12em] text-[#42F5D1] uppercase">
                   Interview Rate
                 </p>
-                <p className="mt-0.5 text-xl font-extrabold tabular-nums text-white">
+                <p className="mt-0.5 text-xl font-extrabold tabular-nums text-[#F8F5FF]">
                   {stats.interviewRate}%
                 </p>
               </div>
               <div
-                className={`panel rounded-[8px] px-3.5 py-2.5 ${
+                className={`border-l border-white/20 px-3.5 py-1 ${
                   stats.ghostingCount > 0 ? 'border-[#ffc1c1]/70' : ''
                 }`}
               >
@@ -326,7 +365,7 @@ export function App() {
                   {stats.ghostingCount}
                 </p>
               </div>
-              <div className="panel col-span-2 rounded-[8px] px-3.5 py-2.5 sm:col-span-1">
+              <div className="col-span-2 border-l border-white/20 px-3.5 py-1 sm:col-span-1">
                 <p className="text-[10px] font-bold tracking-[0.12em] text-[#6ee7b7] uppercase">
                   Offer Diterima
                 </p>
@@ -363,36 +402,56 @@ export function App() {
           )}
 
           {activeTab === 'comparator' && (
-            <section className="panel rounded-[12px] p-10 text-center">
-              <Scale className="mx-auto h-10 w-10 text-[#00f6ff]" />
-              <p className="eyebrow mt-4 text-[#9afff6]">Fitur 7 — Tahap Berikutnya</p>
-              <h2 className="mt-2 text-2xl font-bold text-white">
-                Offer Comparator siap dilanjutkan
-              </h2>
-              <p className="mx-auto mt-2 max-w-lg text-sm text-white/75">
-                Saat ini Fitur 1 (Profil Skill &amp; Eksplorasi), Fitur 2 (Form Manual), dan
-                Fitur 3 (War Room Pipeline, Ghosting &amp; Bentrok) sudah aktif. Fitur 4–7
-                dapat langsung kita tambahkan di tahap berikutnya.
-              </p>
-            </section>
+            <OfferComparator
+              applications={applications}
+              kaptenSkills={kaptenSkills}
+            />
           )}
         </div>
       </main>
 
       {/* Footer — CIF deep navy style */}
-      <footer className="relative z-10 mt-10 border-t border-white/25 bg-[#003471]">
-        <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center justify-between gap-4 px-5 py-5 text-xs text-white/75 md:px-8 lg:px-16">
-          <div className="flex items-center gap-2 font-bold text-white">
-            <Sparkles className="h-4 w-4 text-[#00f6ff]" />
-            <span>AKU MW MAGANG</span>
-            <span className="text-white/40">/</span>
-            <span className="font-normal text-white/75">Praktikum PemWeb Modul 5</span>
-          </div>
+      <footer className="relative z-10 mt-10 border-t border-white/20 lg:ml-[248px]">
+        <div className="mx-auto flex w-full max-w-[1200px] flex-wrap items-center justify-between gap-4 px-4 py-5 text-xs text-[#C2B9D4] sm:px-6 lg:px-8">
+          <p>AKU MW MAGANG / Praktikum PemWeb Modul 5</p>
           <p className="text-[11px] font-semibold tracking-[0.14em] uppercase">
             React 19 · TypeScript Strict · Custom Hooks
           </p>
         </div>
       </footer>
+
+      {pendingUndo && (
+        <div
+          role="status"
+          className="undo-toast fixed right-4 bottom-4 z-[60] flex w-[min(100%-2rem,30rem)] items-center gap-3 border-l-2 border-[#42F5D1] p-4 text-[#F8F5FF]"
+        >
+          <span className="min-w-0 flex-1 text-sm">
+            Lamaran <strong>{pendingUndo.application.company}</strong> dihapus.
+          </span>
+          <button
+            type="button"
+            onClick={handleUndoDelete}
+            className="button button-primary min-h-10 shrink-0 px-3 py-2 text-sm"
+          >
+            <Undo2 className="h-4 w-4" />
+            Undo
+          </button>
+          <button
+            type="button"
+            aria-label="Tutup notifikasi hapus"
+            onClick={() => {
+              if (undoTimeoutRef.current !== null) {
+                window.clearTimeout(undoTimeoutRef.current);
+                undoTimeoutRef.current = null;
+              }
+              setPendingUndo(null);
+            }}
+            className="button button-secondary min-h-10 shrink-0 px-2 py-2"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
 
       {/* Feature 2: Manual Application Modal */}
       <ManualApplicationModal

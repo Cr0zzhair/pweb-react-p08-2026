@@ -3,6 +3,7 @@ import {
   AlertCircle,
   BookmarkCheck,
   BookmarkPlus,
+  ChevronDown,
   Database,
   Loader2,
   MapPin,
@@ -16,7 +17,6 @@ import { fetchJobs } from '../services/jobService';
 import { useDebounce } from '../hooks/useDebounce';
 import {
   calculateSkillMatch,
-  getInitials,
   isDuplicateApplication,
 } from '../utils/skillMatch';
 import { SkillProfileSidebar } from './SkillProfileSidebar';
@@ -31,14 +31,10 @@ interface JobExplorerProps {
 
 type JobSortOption = 'match_desc' | 'match_asc' | 'title_asc';
 
-function getMatchBadgeClasses(score: number): string {
-  if (score >= 70) {
-    return 'border-[#34d399]/60 bg-[#064e3b]/80 text-[#6ee7b7]';
-  }
-  if (score >= 40) {
-    return 'border-[#fbbf24]/60 bg-[#78350f]/80 text-[#fde68a]';
-  }
-  return 'border-[#ffc1c1]/70 bg-[#7f1d1d]/80 text-[#ffc1c1]';
+function matchBadgeColors(score: number): string {
+  if (score >= 70) return 'bg-green-400/10 text-green-300';
+  if (score >= 40) return 'bg-yellow-400/10 text-yellow-300';
+  return 'bg-red-400/10 text-red-300';
 }
 
 export function JobExplorer({
@@ -57,6 +53,7 @@ export function JobExplorer({
   const [searchKeyword, setSearchKeyword] = useState<string>('');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [sortBy, setSortBy] = useState<JobSortOption>('match_desc');
+  const [showPreferences, setShowPreferences] = useState(false);
 
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   const debouncedKeyword = useDebounce(searchKeyword, 400);
@@ -158,37 +155,52 @@ export function JobExplorer({
   }, [jobs, kaptenSkills, applications, debouncedKeyword, selectedCategory, sortBy]);
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[310px_minmax(0,1fr)] lg:gap-8">
-      <SkillProfileSidebar
-        skills={kaptenSkills}
-        onAddSkill={onAddSkill}
-        onRemoveSkill={onRemoveSkill}
-        jobSource={jobSource}
-        onChangeJobSource={setJobSource}
-      />
+    <div className="grid gap-6 xl:grid-cols-[260px_minmax(0,1fr)] xl:gap-8">
+      <div className="min-w-0">
+        <button
+          type="button"
+          className="flex min-h-11 w-full items-center justify-between gap-3 border-b border-white/20 text-sm font-semibold xl:hidden"
+          aria-expanded={showPreferences}
+          aria-controls="explorer-preferences"
+          onClick={() => setShowPreferences((open) => !open)}
+        >
+          Profil skill &amp; sumber lowongan
+          <ChevronDown aria-hidden="true" className={`size-4 transition-transform ${showPreferences ? 'rotate-180' : ''}`} />
+        </button>
+        <div id="explorer-preferences" className={showPreferences ? 'block' : 'hidden xl:block'}>
+          <SkillProfileSidebar
+            skills={kaptenSkills}
+            onAddSkill={onAddSkill}
+            onRemoveSkill={onRemoveSkill}
+            jobSource={jobSource}
+            onChangeJobSource={setJobSource}
+          />
+        </div>
+      </div>
 
       <section className="min-w-0 space-y-5">
         {/* Search, Category Filter & Sort Toolbar */}
-        <div className="panel rounded-[12px] p-4 md:p-5">
-          <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_200px_190px]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute top-1/2 left-3.5 h-4 w-4 -translate-y-1/2 text-white/60" />
+        <div className="@container">
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 @min-[44rem]:grid-cols-[minmax(0,1fr)_11rem_10rem]">
+            <label className="search-field col-span-2 @min-[44rem]:col-span-1">
+              <Search aria-hidden="true" className="size-4 shrink-0" />
               <input
                 ref={searchInputRef}
                 type="search"
                 value={searchKeyword}
                 onChange={(e) => setSearchKeyword(e.target.value)}
-                placeholder='Cari posisi, perusahaan, atau skill... (tekan "/")'
+                placeholder="Cari posisi, perusahaan, atau skill"
                 aria-label="Cari lowongan"
-                className="field pl-10"
+                aria-keyshortcuts="/"
               />
-            </div>
+              <kbd aria-hidden="true" className="hidden text-sm [@media(hover:hover)]:inline">/</kbd>
+            </label>
 
             <select
               aria-label="Filter kategori lowongan"
               value={selectedCategory}
               onChange={(e) => setSelectedCategory(e.target.value)}
-              className="field"
+              className="field min-w-0"
             >
               <option value="ALL">Semua Kategori</option>
               {categories.map((cat) => (
@@ -202,7 +214,7 @@ export function JobExplorer({
               aria-label="Urutkan lowongan"
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value as JobSortOption)}
-              className="field"
+              className="field min-w-0"
             >
               <option value="match_desc">Match Tertinggi</option>
               <option value="match_asc">Match Terendah</option>
@@ -210,19 +222,19 @@ export function JobExplorer({
             </select>
           </div>
 
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-white/15 pt-3 text-xs text-white/75">
-            <span>
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm text-white/75">
+            {!isLoading && !error && <span role="status">
               Menampilkan{' '}
               <strong className="text-[#9afff6] tabular-nums">
                 {enrichedAndFilteredJobs.length}
               </strong>{' '}
               dari <strong className="tabular-nums">{jobs.length}</strong> lowongan (
               {jobSource === 'live' ? 'Remotive Live API' : 'Dataset Lokal Indonesia'})
-            </span>
+            </span>}
             {searchKeyword !== debouncedKeyword && (
               <span className="inline-flex items-center gap-1.5 text-[#00f6ff]">
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                Menunggu debounce 400ms...
+                Mencari…
               </span>
             )}
           </div>
@@ -302,107 +314,55 @@ export function JobExplorer({
           </div>
         )}
 
-        {/* Job Cards Grid */}
         {!isLoading && !error && enrichedAndFilteredJobs.length > 0 && (
-          <div className="grid gap-4 md:grid-cols-2">
+          <ul aria-label="Hasil pencarian lowongan" className="border-t border-white/15">
             {enrichedAndFilteredJobs.map(({ job, match, alreadyApplied }) => (
-              <article
-                key={job.id}
-                className="panel flex flex-col justify-between rounded-[12px] p-5 transition-colors hover:border-[#9afff6]/60 hover:bg-[#003471]/60"
-              >
-                <div>
-                  {/* Card Top: Company + Match Score Badge */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3">
-                      <div
-                        aria-hidden="true"
-                        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[8px] border border-white/40 bg-[#003471] text-sm font-extrabold italic text-[#00f6ff]"
-                      >
-                        {getInitials(job.company_name)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-bold text-white">
-                          {job.company_name}
-                        </p>
-                        <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-white/70">
-                          <MapPin className="h-3.5 w-3.5 shrink-0 text-[#9afff6]" />
-                          <span className="truncate">{job.candidate_required_location}</span>
-                        </p>
-                      </div>
-                    </div>
-
-                    <span
-                      className={`shrink-0 rounded-full border px-2.5 py-1 text-xs font-extrabold tabular-nums ${getMatchBadgeClasses(
-                        match.score
-                      )}`}
-                    >
-                      {match.score}% Match
+              <li key={job.id} className="job-row">
+                <article aria-labelledby={`job-title-${job.id}`}>
+                  <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-sm">
+                    <p className="text-white/65">{job.category}</p>
+                    <span className={`rounded-full px-2 py-0.5 text-sm font-semibold tabular-nums ${matchBadgeColors(match.score)}`}>
+                      {match.score}% cocok
                     </span>
                   </div>
-
-                  {/* Role & Category */}
-                  <h3 className="mt-4 text-base font-bold leading-snug text-white">
+                  <h3 id={`job-title-${job.id}`} className="mt-1 text-xl font-semibold leading-snug tracking-tight">
                     {job.title}
                   </h3>
-                  <p className="mt-1 text-xs font-medium text-[#9afff6]/90">
-                    {job.category}
-                  </p>
-
-                  {/* Matched vs Missing Skills */}
-                  <div className="mt-3.5 flex flex-wrap gap-1.5">
-                    {match.matchedSkills.map((skill) => (
-                      <span
-                        key={`match-${skill}`}
-                        className="rounded-[5px] border border-[#00f6ff]/50 bg-[#00f6ff]/15 px-2 py-0.5 text-[11px] font-semibold text-[#9afff6]"
-                      >
-                        ✓ {skill}
-                      </span>
-                    ))}
-                    {match.missingSkills.map((skill) => (
-                      <span
-                        key={`miss-${skill}`}
-                        className="rounded-[5px] border border-[#ffc1c1]/50 bg-[#ffc1c1]/10 px-2 py-0.5 text-[11px] font-semibold text-[#ffc1c1]"
-                        title="Missing skill — belum ada di Profil Kapten"
-                      >
-                        ✕ {skill}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Card Footer: Salary + Save CTA */}
-                <div className="mt-5 flex items-center justify-between gap-3 border-t border-white/15 pt-4">
-                  <div className="min-w-0">
-                    <span className="flex items-center gap-1.5 text-xs font-bold text-[#9afff6]">
-                      <Wallet className="h-3.5 w-3.5 shrink-0" />
-                      <span className="truncate">{job.salary}</span>
+                  <p className="mt-1 text-base">{job.company_name}</p>
+                  <div className="mt-2 flex flex-wrap gap-x-5 gap-y-1 text-sm text-white/75">
+                    <span className="inline-flex items-center gap-1.5">
+                      <MapPin aria-hidden="true" className="size-4 shrink-0" />
+                      {job.candidate_required_location}
+                    </span>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Wallet aria-hidden="true" className="size-4 shrink-0" />
+                      {job.salary}
                     </span>
                   </div>
-
-                  <button
-                    type="button"
-                    disabled={alreadyApplied}
-                    onClick={() => onSaveToWishlist(job)}
-                    className={`button min-h-10 shrink-0 px-3.5 py-2 text-xs ${
-                      alreadyApplied ? 'button-secondary' : 'button-primary'
-                    }`}
-                  >
-                    {alreadyApplied ? (
-                      <>
-                        <BookmarkCheck className="h-4 w-4 text-[#00f6ff]" />
-                        Sudah Dilamar
-                      </>
-                    ) : (
-                      <>
-                        <BookmarkPlus className="h-4 w-4" />
-                        Simpan ke Wishlist
-                      </>
-                    )}
-                  </button>
-                </div>
-              </article>
+                  <div className="mt-3 flex flex-wrap items-end justify-between gap-x-5 gap-y-1">
+                    <div className="min-w-0 space-y-1 text-sm text-white/75">
+                      {match.matchedSkills.length > 0 && (
+                        <p><strong className="font-medium text-(--accent)">Skill cocok</strong> · {match.matchedSkills.join(', ')}</p>
+                      )}
+                      {match.missingSkills.length > 0 && (
+                        <p><strong className="font-medium text-white/90">Belum di profil</strong> · {match.missingSkills.join(', ')}</p>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      disabled={alreadyApplied}
+                      onClick={() => onSaveToWishlist(job)}
+                      className="job-save"
+                    >
+                      {alreadyApplied ? <BookmarkCheck aria-hidden="true" size={16} /> : <BookmarkPlus aria-hidden="true" size={16} />}
+                      {alreadyApplied ? 'Sudah Dilamar' : 'Simpan ke Wishlist'}
+                      <span className="sr-only"> — {job.title}, {job.company_name}</span>
+                    </button>
+                  </div>
+                </article>
+              </li>
             ))}
-          </div>
+          </ul>
         )}
       </section>
     </div>

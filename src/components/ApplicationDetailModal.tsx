@@ -150,12 +150,12 @@ export function ApplicationDetailModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[#001941]/80 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
       role="dialog"
       aria-modal="true"
       aria-labelledby="detail-modal-title"
     >
-      <div className="flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden rounded-[12px] border border-white/40 bg-[#003471] shadow-[0_12px_30px_#00347180]">
+      <div className="detail-modal flex max-h-[90vh] w-full max-w-4xl flex-col overflow-hidden">
         {/* Modal Header */}
         <div className="flex items-start justify-between gap-4 border-b border-white/20 px-6 py-4">
           <div className="min-w-0">

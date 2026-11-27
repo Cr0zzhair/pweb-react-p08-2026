@@ -10,8 +10,8 @@ export function useLocalStorage<T>(
       if (item !== null) {
         return JSON.parse(item) as T;
       }
-    } catch {
-      // Fallback to initialValue if localStorage is unavailable or corrupt
+    } catch (error: unknown) {
+      console.error(`Gagal membaca localStorage untuk "${key}".`, error);
     }
     return initialValue;
   });
@@ -19,8 +19,8 @@ export function useLocalStorage<T>(
   useEffect(() => {
     try {
       window.localStorage.setItem(key, JSON.stringify(storedValue));
-    } catch {
-      // Ignore quota / storage errors gracefully
+    } catch (error: unknown) {
+      console.error(`Gagal menyimpan localStorage untuk "${key}".`, error);
     }
   }, [key, storedValue]);
 
